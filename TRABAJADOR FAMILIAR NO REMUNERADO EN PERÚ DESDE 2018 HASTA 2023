@@ -1,0 +1,65 @@
+***ACÁ LES DEJO MIS COMANDOS Y BUCLES DE CÓMO HALLAR LA CANTIDAD DE TRABAJADO FAMILIAR NO REMUNERADO EN PERÚ DESDE 2018 HASTA EL AÑO 2023, RECORDAD QUE UTILICÉ LA BASE DE DATO ENAHO, MÓDULO EMPLEO E INGRESOS
+*Limpieza de stata
+clear all
+*escogiendo el escritorio
+cd "C:\Users\anton\OneDrive\Escritorio\empleo e ingresos"
+*iterando
+forvalues year = 2018/2023 {
+    local filename "enaho01a-`year'-500.dta"
+    
+    unicode analyze `filename'
+    unicode encoding set "latin1"
+    unicode translate `filename'
+}
+
+forvalues year = 2018/2023 {
+    local filename "enaho01a-`year'-500.dta"
+    
+    use "`filename'", clear
+    
+    rename aÑo year
+    destring year, replace
+    
+    describe p507
+    codebook p507
+    
+
+* Eliminando las observaciones donde p507 no tiene valores
+drop if missing(p507)
+
+* Contar los casos donde p507 es 5, asignando y creando tfnr_count
+count if p507 == 5
+gen tfnr_count = r(N)
+
+* Contando total de personas, asignando y creando total_count
+count if !missing(p507)
+gen total_count = r(N)
+
+* División tfnr_ratio
+gen tfnr_ratio = tfnr_count / total_count
+
+*Resultados con display
+display "Número de TFNR: " tfnr_count
+display "Número total de trabajadores: " total_count
+display "Proporción de TFNR sobre el total: " %6.2f tfnr_ratio
+    
+    save base1`year'.dta, replace
+}
+
+
+* Usando el primer archivo
+use base12018.dta, clear
+* Append une los otros archivos
+forvalues year = 2019/2023 {
+    append using base1`year'.dta
+}
+* Guardando en un solo archivo final
+save basefinal.dta, replace
+
+use basefinal.dta, clear
+
+*cuadro
+table year, c(mean tfnr_count mean total_count mean tfnr_ratio) format(%9.2f)
+*Gráfica de barra de tfnr
+graph bar (mean) tfnr_count, over(year) ytitle("Cantidad de FTNR", size(small)) title("Número de Trabajadores Familiares no Remunerados por Año", size(medium)) note("Fuente: INEI | Elaboración propia", size(small)) scheme(s1color)
+ graph export "C:\Users\anton\OneDrive\Escritorio\empleo e ingresos\gráf1.png", as(png) name("Graph") replace
