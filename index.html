@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanzasAmables - Dashboard Ejecutivo</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Exportación a PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 font-sans p-4 md:p-6 selection:bg-emerald-500 selection:text-slate-900">
+
+    <div id="dashboard-container" class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- Encabezado Responsive -->
+        <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-slate-900/80 backdrop-blur-md p-5 md:p-6 rounded-2xl shadow-2xl border border-slate-800 gap-4">
+            <div>
+                <h1 id="txtSaludo" class="text-xl md:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200">
+                    👋 Hola, Antony. Tu resumen financiero:
+                </h1>
+                <p class="text-xs md:text-sm text-slate-400 mt-1">Control inteligente, ingresos, gastos y metas patrimoniales en tiempo real.</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2 md:gap-3 w-full lg:w-auto">
+                <!-- Selector de Mes -->
+                <select id="selectMes" onchange="cargarDatosDashboard()" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs md:text-sm rounded-xl px-3 py-2 outline-none focus:border-emerald-500 shadow-inner flex-1 lg:flex-none">
+                    <option value="2026-11">Noviembre 2026</option>
+                    <option value="2026-12">Diciembre 2026</option>
+                    <option value="2027-01">Enero 2027</option>
+                </select>
+
+                <!-- Botón Edición Manual -->
+                <button onclick="abrirModalManual()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-bold px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm transition shadow-lg shadow-emerald-900/30 flex items-center gap-1">
+                    ✏️ Manual
+                </button>
+                
+                <!-- Botón de PDF Único -->
+                <button onclick="exportarPDF()" class="bg-slate-800 hover:bg-slate-700 text-rose-400 border border-rose-500/30 px-4 py-2 rounded-xl text-xs md:text-sm font-medium transition shadow-sm flex items-center gap-1">
+                    📄 Exportar PDF
+                </button>
+            </div>
+        </header>
+
+        <!-- Tarjetas Financieras -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-gradient-to-br from-slate-900 to-slate-950 p-5 rounded-2xl shadow-xl border border-emerald-500/20 relative overflow-hidden">
+                <p class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Ingreso Base + Extras</p>
+                <h2 id="txtIngresoTotal" class="text-xl md:text-2xl font-black text-emerald-400 mt-1">S/ 1,800.00</h2>
+                <span id="txtDetalleIngresos" class="text-xs text-slate-400 mt-1 block">Base S/ 1,800 + Extras S/ 0</span>
+            </div>
+            
+            <div class="bg-gradient-to-br from-slate-900 to-slate-950 p-5 rounded-2xl shadow-xl border border-rose-500/20 relative overflow-hidden">
+                <p class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Gastos Totales</p>
+                <h2 id="txtGastos" class="text-xl md:text-2xl font-black text-rose-400 mt-1">S/ 0.00</h2>
+                <span id="txtPorcentajeGasto" class="text-xs text-rose-300 mt-1 block">0% de tus ingresos</span>
+            </div>
+
+            <div class="bg-gradient-to-br from-slate-900 to-slate-950 p-5 rounded-2xl shadow-xl border border-sky-500/20 relative overflow-hidden">
+                <p class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Inversiones & Activos</p>
+                <h2 id="txtInversiones" class="text-xl md:text-2xl font-black text-sky-400 mt-1">S/ 0.00</h2>
+                <span class="text-xs text-sky-300 mt-1 block">BVL / Emprendimiento</span>
+            </div>
+
+            <div class="bg-gradient-to-br from-slate-900 to-slate-950 p-5 rounded-2xl shadow-xl border border-indigo-500/20 relative overflow-hidden">
+                <p class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Balance / Ahorro</p>
+                <h2 id="txtBalance" class="text-xl md:text-2xl font-black text-indigo-400 mt-1">S/ 1,800.00</h2>
+                <span class="text-xs text-indigo-300 mt-1 block">Salud financiera óptima</span>
+            </div>
+        </div>
+
+        <!-- Gráficos de Lujo -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-slate-900/85 backdrop-blur-md p-5 md:p-6 rounded-2xl shadow-xl border border-slate-800">
+                <h3 class="font-bold text-sm md:text-base mb-4 text-slate-200">📊 Flujo Financiero General</h3>
+                <div class="relative h-60 md:h-64"><canvas id="graficoFlujo"></canvas></div>
+            </div>
+            <div class="bg-slate-900/85 backdrop-blur-md p-5 md:p-6 rounded-2xl shadow-xl border border-slate-800">
+                <h3 class="font-bold text-sm md:text-base mb-4 text-slate-200">🍩 Distribución Porcentual (%)</h3>
+                <div class="relative h-60 md:h-64"><canvas id="graficoCategorias"></canvas></div>
+            </div>
+        </div>
+
+        <!-- DESGLOSE ORDENADO: INGRESOS Y GASTOS SEPARADOS -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Tabla de Entradas / Ingresos -->
+            <div class="bg-slate-900/85 backdrop-blur-md p-5 md:p-6 rounded-2xl shadow-xl border border-slate-800">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-sm md:text-base text-emerald-400">🟢 Entradas (Ingresos y Negocios)</h3>
+                    <span id="txtCountIngresos" class="text-xs text-slate-400 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">0 reg.</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs md:text-sm text-slate-300">
+                        <thead class="bg-slate-950 text-slate-400 uppercase text-xs">
+                            <tr>
+                                <th class="p-3 rounded-l-xl">Fecha</th>
+                                <th class="p-3">Detalle</th>
+                                <th class="p-3 rounded-r-xl text-right">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaIngresosBody" class="divide-y divide-slate-800">
+                            <tr><td colspan="3" class="p-4 text-center text-slate-500">Sin ingresos extras registrados.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tabla de Salidas / Gastos -->
+            <div class="bg-slate-900/85 backdrop-blur-md p-5 md:p-6 rounded-2xl shadow-xl border border-slate-800">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-sm md:text-base text-rose-400">🔴 Salidas (Gastos y Consumos)</h3>
+                    <span id="txtCountGastos" class="text-xs text-slate-400 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">0 reg.</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs md:text-sm text-slate-300">
+                        <thead class="bg-slate-950 text-slate-400 uppercase text-xs">
+                            <tr>
+                                <th class="p-3 rounded-l-xl">Fecha</th>
+                                <th class="p-3">Detalle</th>
+                                <th class="p-3 rounded-r-xl text-right">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaGastosBody" class="divide-y divide-slate-800">
+                            <tr><td colspan="3" class="p-4 text-center text-slate-500">Sin gastos registrados.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Módulo de Metas Patrimoniales -->
+        <div class="bg-slate-900/85 backdrop-blur-md p-5 md:p-6 rounded-2xl shadow-xl border border-slate-800">
+            <h3 class="font-bold text-sm md:text-base mb-3 text-emerald-400">🎯 Simulador de Metas Patrimoniales (Depa / Auto)</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">Meta Deseada (S/):</label>
+                    <input type="number" id="metaMonto" value="40000" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs md:text-sm rounded-xl px-3 py-2 outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">Plazo en Años:</label>
+                    <input type="number" id="metaAnios" value="3" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs md:text-sm rounded-xl px-3 py-2 outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <button onclick="calcularMetaFinanciera()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs md:text-sm transition shadow-lg">
+                        Calcular Cuota 🚀
+                    </button>
+                </div>
+            </div>
+            <div id="resultadoMeta" class="mt-4 p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs md:text-sm text-slate-300 hidden"></div>
+        </div>
+
+    </div>
+
+    <!-- Modal Manual -->
+    <div id="modalManual" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-base md:text-lg font-bold text-emerald-400">✏️ Registrar Transacción</h3>
+                <button onclick="cerrarModalManual()" class="text-slate-400 hover:text-white text-xl">✕</button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">Tipo de Movimiento:</label>
+                    <select id="inputTipo" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs md:text-sm rounded-xl px-3 py-2 outline-none focus:border-emerald-500">
+                        <option value="gasto_variable">Gasto (Variable / Hormiga)</option>
+                        <option value="ingreso">Ingreso Extra / Negocio</option>
+                        <option value="inversion">Inversión (BVL / Activo)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">Monto (S/):</label>
+                    <input type="number" id="inputMonto" step="0.01" placeholder="Ej. 120.00" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs md:text-sm rounded-xl px-3 py-2 outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">Descripción / Detalle:</label>
+                    <input type="text" id="inputDesc" placeholder="Ej. Venta de agua / Comida" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs md:text-sm rounded-xl px-3 py-2 outline-none focus:border-emerald-500">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-3">
+                <button onclick="cerrarModalManual()" class="bg-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs md:text-sm">Cancelar</button>
+                <button onclick="guardarRegistroManual()" class="bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs md:text-sm">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://ergipcdlhpgqsqeiobpr.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_r1BKcVDadGJSBGKTFnPX8A_DczL_0LP";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let graficoFlujoObj = null;
+        let graficoCatObj = null;
+        let transaccionesGlobales = [];
+        const usuarioActualNombre = "Antony";
+
+        async function cargarDatosDashboard() {
+            try {
+                const mesSeleccionado = document.getElementById('selectMes').value;
+                document.getElementById('txtSaludo').innerText = `👋 Hola, ${usuarioActualNombre}. Tu resumen de este mes:`;
+
+                const { data, error } = await supabaseClient
+                    .from('transactions')
+                    .select('*')
+                    .order('date', { ascending: false });
+                
+                if (error) { console.error("Error:", error); return; }
+
+                transaccionesGlobales = (data || []).filter(t => {
+                    if (!t.date) return true;
+                    return t.date.startsWith(mesSeleccionado);
+                });
+
+                let ingresoBase = 1800;
+                let ingresosExtras = 0;
+                let totalGastos = 0;
+                let totalInversiones = 0;
+
+                let ingresosHTML = "";
+                let gastosHTML = "";
+                let countIng = 0;
+                let countGas = 0;
+
+                transaccionesGlobales.forEach(t => {
+                    const montoNum = Number(t.amount);
+                    const fechaFormateada = t.date ? new Date(t.date).toLocaleDateString() : "Reciente";
+                    const desc = t.description || t.category || '-';
+
+                    if (t.type === 'ingreso' || t.type === 'inversion') {
+                        if (t.type === 'ingreso') ingresosExtras += montoNum;
+                        if (t.type === 'inversion') totalInversiones += montoNum;
+                        countIng++;
+                        ingresosHTML += `
+                            <tr class="hover:bg-slate-800/50 transition">
+                                <td class="p-3 text-xs text-slate-400">${fechaFormateada}</td>
+                                <td class="p-3 font-medium text-slate-200">${desc}</td>
+                                <td class="p-3 text-right font-black text-emerald-400">S/ ${montoNum.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    } else {
+                        totalGastos += montoNum;
+                        countGas++;
+                        gastosHTML += `
+                            <tr class="hover:bg-slate-800/50 transition">
+                                <td class="p-3 text-xs text-slate-400">${fechaFormateada}</td>
+                                <td class="p-3 font-medium text-slate-200">${desc}</td>
+                                <td class="p-3 text-right font-black text-rose-400">S/ ${montoNum.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                if (countIng > 0) document.getElementById('tablaIngresosBody').innerHTML = ingresosHTML;
+                else document.getElementById('tablaIngresosBody').innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-500">Sin ingresos extras registrados.</td></tr>`;
+
+                if (countGas > 0) document.getElementById('tablaGastosBody').innerHTML = gastosHTML;
+                else document.getElementById('tablaGastosBody').innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-500">Sin gastos registrados.</td></tr>`;
+
+                document.getElementById('txtCountIngresos').innerText = `${countIng} reg.`;
+                document.getElementById('txtCountGastos').innerText = `${countGas} reg.`;
+
+                const ingresoTotal = ingresoBase + ingresosExtras;
+                document.getElementById('txtIngresoTotal').innerText = `S/ ${ingresoTotal.toFixed(2)}`;
+                document.getElementById('txtDetalleIngresos').innerText = `Base S/ ${ingresoBase} + Extras S/ ${ingresosExtras.toFixed(2)}`;
+
+                document.getElementById('txtGastos').innerText = `S/ ${totalGastos.toFixed(2)}`;
+                const porcentajeGasto = ((totalGastos / ingresoTotal) * 100).toFixed(1);
+                document.getElementById('txtPorcentajeGasto').innerText = `${porcentajeGasto}% de tus ingresos`;
+
+                document.getElementById('txtInversiones').innerText = `S/ ${totalInversiones.toFixed(2)}`;
+
+                const balance = ingresoTotal - totalGastos - totalInversiones;
+                document.getElementById('txtBalance').innerText = `S/ ${balance.toFixed(2)}`;
+
+                actualizarGraficos(ingresoTotal, totalGastos, totalInversiones, balance);
+
+            } catch (err) { console.error("Excepción:", err); }
+        }
+
+        function actualizarGraficos(ingresos, gastos, inversiones, balance) {
+            const ctxFlujo = document.getElementById('graficoFlujo').getContext('2d');
+            if (graficoFlujoObj) graficoFlujoObj.destroy();
+            
+            graficoFlujoObj = new Chart(ctxFlujo, {
+                type: 'bar',
+                data: {
+                    labels: ['Ingresos', 'Gastos', 'Inversiones', 'Balance'],
+                    datasets: [{
+                        data: [ingresos, gastos, inversiones, balance],
+                        backgroundColor: ['#10b981', '#f43f5e', '#38bdf8', '#6366f1'],
+                        borderRadius: 8
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            const ctxCat = document.getElementById('graficoCategorias').getContext('2d');
+            if (graficoCatObj) graficoCatObj.destroy();
+
+            graficoCatObj = new Chart(ctxCat, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Gastos', 'Inversiones', 'Disponible (Ahorro)'],
+                    datasets: [{
+                        data: [gastos, inversiones, Math.max(0, balance)],
+                        backgroundColor: ['#f43f5e', '#38bdf8', '#10b981'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#cbd5e1' } } } }
+            });
+        }
+
+        function calcularMetaFinanciera() {
+            const montoMeta = parseFloat(document.getElementById('metaMonto').value);
+            const anios = parseFloat(document.getElementById('metaAnios').value);
+            if (!montoMeta || !anios || anios <= 0) { alert("Ingresa valores válidos."); return; }
+            const ahorroMensual = montoMeta / (anios * 12);
+            const porcentaje = ((ahorroMensual / 1800) * 100).toFixed(1);
+
+            const resDiv = document.getElementById('resultadoMeta');
+            resDiv.classList.remove('hidden');
+            resDiv.innerHTML = `
+                <p class="font-semibold text-emerald-400">💡 Plan Financiero:</p>
+                <p class="mt-1">Para tu meta de <span class="text-white font-bold">S/ ${montoMeta.toLocaleString()}</span> en <span class="text-white font-bold">${anios} años</span>:</p>
+                <p class="mt-2 text-sm md:text-base font-bold text-teal-300">👉 Debes separar S/ ${ahorroMensual.toFixed(2)} al mes (${porcentaje}% de tu ingreso base).</p>
+            `;
+        }
+
+        function abrirModalManual() { document.getElementById('modalManual').classList.remove('hidden'); }
+        function cerrarModalManual() { document.getElementById('modalManual').classList.add('hidden'); }
+
+        async function guardarRegistroManual() {
+            const tipo = document.getElementById('inputTipo').value;
+            const monto = parseFloat(document.getElementById('inputMonto').value);
+            const desc = document.getElementById('inputDesc').value;
+
+            if (!monto || isNaN(monto) || monto <= 0) { alert("Ingresa un monto válido."); return; }
+
+            const { data: profiles } = await supabaseClient.from('profiles').select('id').limit(1);
+            if (!profiles || profiles.length === 0) { alert("No se encontró perfil."); return; }
+
+            const { error } = await supabaseClient.from('transactions').insert({
+                user_id: profiles[0].id,
+                type: tipo,
+                category: tipo === 'ingreso' ? 'Negocio / Extra' : (tipo === 'inversion' ? 'BVL' : 'Manual'),
+                amount: monto,
+                description: desc || 'Registro web'
+            });
+
+            if (error) { alert("Error: " + error.message); } 
+            else {
+                alert("¡Guardado con éxito!");
+                cerrarModalManual();
+                document.getElementById('inputMonto').value = '';
+                document.getElementById('inputDesc').value = '';
+                cargarDatosDashboard();
+            }
+        }
+
+        function exportarPDF() {
+            html2pdf().from(document.getElementById('dashboard-container')).save('Reporte_FinanzasAmables.pdf');
+        }
+
+        cargarDatosDashboard();
+    </script>
+</body>
+</html>
